@@ -24,7 +24,29 @@ addEventButton.addEventListener('click', addAndPostEvent);
 
 Notification.requestPermission();
 
-// const dbPromise = createIndexedDB();
+const dbPromise = createIndexedDB();
+
+function createIndexedDB() {
+  if (!('indexedDB' in window)) {return null;}
+  return idb.open('dashboardr', 1, function(upgradeDb) {
+    if (!upgradeDb.objectStoreNames.contains('events')) {
+      let eventsOS = upgradeDb.createObjectStore('events', {keyPath: 'id'});
+    }
+  });
+}
+
+function saveEventDataLocally(events) {
+  if (!('indexedDB' in window)) {return null;}
+  return dbPromise.then(db => {
+    const tx = db.transaction('events', 'readwrite');
+    const store = tx.objectStore('events');
+    return Promise.all(events.map(event => store.put(event)))
+    .catch(() => {
+      tx.abort();
+      throw Error('Events were not added to the store');
+    });
+  });
+}
 
 loadContentNetworkFirst();
 
@@ -32,6 +54,14 @@ function loadContentNetworkFirst() {
   getServerData()
   .then(dataFromNetwork => {
     updateUI(dataFromNetwork);
+    saveEventDataLocally(dataFromNetwork)
+    .then(() => {
+      setLastUpdated(new Date());
+      messageDataSaved();
+    }).catch(err => {
+      messageSaveError();
+      console.warn(err);
+    });
   }).catch(err => { // if we can't connect to the server...
     console.log('Network requests have failed, this is expected if offline');
   });
@@ -58,7 +88,7 @@ function addAndPostEvent(e) {
     note: document.getElementById('note').value
   };
   updateUI([data]);
-  // saveEventDataLocally([data]);
+  saveEventDataLocally([data]);
   const headers = new Headers({'Content-Type': 'application/json'});
   const body = JSON.stringify(data);
   return fetch('api/add', {

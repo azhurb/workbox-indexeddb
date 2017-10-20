@@ -13,3 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+importScripts('workbox-sw.dev.v2.0.0.js');
+importScripts('workbox-background-sync.dev.v2.0.0.js');
+
+const workboxSW = new WorkboxSW();
+workboxSW.precache([]);
+
+workboxSW.precache([
+  'https://fonts.googleapis.com/css?family=Roboto:300,400,500,700'
+]);
