@@ -22,6 +22,11 @@ const addEventButton = document.getElementById('add-event-button');
 
 addEventButton.addEventListener('click', addAndPostEvent);
 
+window.addEventListener('online', () => {
+  container.innerHTML = '';
+  loadContentNetworkFirst();
+});
+
 Notification.requestPermission();
 
 const dbPromise = createIndexedDB();
@@ -62,8 +67,26 @@ function loadContentNetworkFirst() {
       messageSaveError();
       console.warn(err);
     });
-  }).catch(err => { // if we can't connect to the server...
+  }).catch(err => {
     console.log('Network requests have failed, this is expected if offline');
+    getLocalEventData()
+    .then(offlineData => {
+      if (!offlineData.length) {
+        messageNoData();
+      } else {
+        messageOffline();
+        updateUI(offlineData);
+      }
+    });
+  });
+}
+
+function getLocalEventData() {
+  if (!('indexedDB' in window)) {return null;}
+  return dbPromise.then(db => {
+    let tx = db.transaction('events', 'readonly');
+    let store = tx.objectStore('events');
+    return store.getAll();
   });
 }
 
